@@ -16,7 +16,9 @@ import * as HttpClient from "effect/http/HttpClient";
 
 import * as DesktopBackendPool from "./DesktopBackendPool.ts";
 
-const BOOTSTRAP_TRANSIENT_RETRY_TIMEOUT = Duration.seconds(15);
+// A cold backend can stall past several 10s request timeouts right after readiness;
+// match the minute the backend supervisor already allows for startup.
+const BOOTSTRAP_TRANSIENT_RETRY_TIMEOUT = Duration.minutes(1);
 const BOOTSTRAP_TRANSIENT_RETRY_INTERVAL = Duration.millis(500);
 const TRANSIENT_BOOTSTRAP_STATUS_CODES = new Set([502, 503, 504]);
 
