@@ -319,6 +319,26 @@ describe("provider workspace snapshot refresh atom", () => {
     unmount();
   });
 
+  it("keeps reporting skills loading while the scan returns a pending snapshot", async () => {
+    vi.useFakeTimers({ now: Date.parse("2026-01-01T00:00:00.000Z") });
+    const pending = withSnapshot("2026-01-01T00:00:00.000Z", true);
+    const { registry, atom, providersAtom, unmount } = setup(pending, [() => pending]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(isProviderWorkspaceSnapshotScanning(registry.get(atom))).toBe(true);
+    registry.set(providersAtom, withSnapshot("2026-01-01T00:00:00.000Z"));
+    expect(isProviderWorkspaceSnapshotScanning(registry.get(atom))).toBe(false);
+    unmount();
+  });
+
+  it("stops reporting skills loading once a pending snapshot exhausts its retries", async () => {
+    vi.useFakeTimers({ now: Date.parse("2026-01-01T00:00:00.000Z") });
+    const { registry, atom, run, unmount } = setup(withSnapshot("2026-01-01T00:00:00.000Z", true));
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(run).toHaveBeenCalledTimes(3);
+    expect(isProviderWorkspaceSnapshotScanning(registry.get(atom))).toBe(false);
+    unmount();
+  });
+
   it("does not report skills loading for a current snapshot", () => {
     vi.useFakeTimers({ now: Date.parse("2026-01-01T00:01:00.000Z") });
     const { registry, atom, unmount } = setup(withSnapshot("2026-01-01T00:00:00.000Z"));

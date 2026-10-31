@@ -831,7 +831,11 @@ export const ThreadComposer = function ThreadComposer(props: ThreadComposerProps
         {props.draftControls}
         {!isSubmissionLocked &&
         composerMenu.trigger &&
-        (composerMenu.items.length > 0 || composerMenu.trigger.kind === "pull-request") ? (
+        (composerMenu.items.length > 0 ||
+          composerMenu.trigger.kind === "pull-request" ||
+          (composerMenu.isLoading &&
+            (composerMenu.trigger.kind === "skill" ||
+              composerMenu.trigger.kind === "slash-command"))) ? (
           <ComposerPopoverAnchor>
             <ComposerCommandPopover
               items={composerMenu.items}
