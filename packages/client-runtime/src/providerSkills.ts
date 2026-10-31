@@ -136,7 +136,7 @@ const WORKSPACE_SNAPSHOT_RETRY_COOLDOWN_MS = 10_000;
 // A cwd that never scans, such as a deleted worktree, would otherwise retry forever.
 const WORKSPACE_SNAPSHOT_MAX_ATTEMPTS = 3;
 
-interface ProviderWorkspaceSnapshotRefreshState {
+export interface ProviderWorkspaceSnapshotRefreshState {
   /**
    * When the last scan was requested. A request inside the TTL is not
    * repeated, so a client clock ahead of the server's cannot loop rescans.
@@ -221,6 +221,22 @@ function failProviderWorkspaceSnapshotRefresh(
     retryNotBefore: now + WORKSPACE_SNAPSHOT_RETRY_COOLDOWN_MS,
     failedAttempts,
   };
+}
+
+/**
+ * A scan is in flight for a cwd without a complete snapshot, so its project
+ * skills may still arrive. A failed scan clears `requestedAt` (or exhausts its
+ * attempts), so this never stays true for a scan that is not running.
+ */
+export function isProviderWorkspaceSnapshotScanning(
+  state: ProviderWorkspaceSnapshotRefreshState | undefined,
+): boolean {
+  return (
+    state !== undefined &&
+    state.requestedAt !== null &&
+    !state.hadSnapshot &&
+    state.failedAttempts < WORKSPACE_SNAPSHOT_MAX_ATTEMPTS
+  );
 }
 
 type WorkspaceSnapshotStatus = "absent" | "pending" | "complete";
@@ -330,6 +346,8 @@ export function createProviderWorkspaceSnapshotRefreshAtomFamily(input: {
     ).pipe(Atom.withLabel(`provider-workspace-snapshot-refresh:${key}`));
     return refreshAtom;
   });
-  return (target: ProviderWorkspaceSnapshotRefreshTarget): Atom.Atom<unknown> =>
+  return (
+    target: ProviderWorkspaceSnapshotRefreshTarget,
+  ): Atom.Atom<ProviderWorkspaceSnapshotRefreshState> =>
     family({ environmentId: target.environmentId, instanceId: target.instanceId, cwd: target.cwd });
 }
