@@ -47,12 +47,10 @@ import {
   getProviderSkillsForSlashMenu,
   getProviderSlashCommandsForSlashMenu,
   isProviderSkillUserInvocable,
-  isProviderWorkspaceSnapshotScanning,
-  type ProviderWorkspaceSnapshotRefreshState,
   resolveProviderSkillsForCwd,
   resolveProviderSlashCommandsForCwd,
 } from "@t3tools/client-runtime/providerSkills";
-import { useAtomRefresh, useAtomValue } from "@effect/atom-react";
+import { useAtomRefresh } from "@effect/atom-react";
 import { Atom } from "effect/reactivity";
 import { useEffect, useState } from "react";
 
@@ -71,9 +69,7 @@ const providerWorkspaceSnapshotRefresh = createProviderWorkspaceSnapshotRefreshA
   refreshProviders: serverEnvironment.refreshProviders,
 });
 
-const idleWorkspaceSnapshotRefreshAtom: Atom.Atom<
-  ProviderWorkspaceSnapshotRefreshState | undefined
-> = Atom.make<ProviderWorkspaceSnapshotRefreshState | undefined>(undefined).pipe(
+const idleWorkspaceSnapshotRefreshAtom: Atom.Atom<unknown> = Atom.make<void>(undefined).pipe(
   Atom.withLabel("mobile:provider-workspace-snapshot-refresh:idle"),
 );
 
@@ -271,17 +267,14 @@ export function useComposerCommandMenu({
     ? resolveProviderSkillsForCwd(selectedProviderStatus, projectCwd)
     : [];
   const selectedProviderInstanceId = selectedProviderStatus?.instanceId;
-  const workspaceSnapshotRefreshAtom =
+  const refreshWorkspaceSnapshot = useAtomRefresh(
     environmentId && projectCwd && selectedProviderInstanceId
       ? providerWorkspaceSnapshotRefresh({
           environmentId,
           instanceId: selectedProviderInstanceId,
           cwd: projectCwd,
         })
-      : idleWorkspaceSnapshotRefreshAtom;
-  const refreshWorkspaceSnapshot = useAtomRefresh(workspaceSnapshotRefreshAtom);
-  const workspaceSkillsScanning = isProviderWorkspaceSnapshotScanning(
-    useAtomValue(workspaceSnapshotRefreshAtom),
+      : idleWorkspaceSnapshotRefreshAtom,
   );
   // Every draft change rechecks a stale snapshot, including drafts written by
   // another surface (a prompt link) that never move the editor selection.
@@ -623,11 +616,7 @@ export function useComposerCommandMenu({
     items,
     skills,
     isLoading:
-      trigger?.kind === "pull-request"
-        ? pullRequestSearch.isPending
-        : trigger?.kind === "skill" || trigger?.kind === "slash-command"
-          ? workspaceSkillsScanning
-          : pathSearch.isPending,
+      trigger?.kind === "pull-request" ? pullRequestSearch.isPending : pathSearch.isPending,
     error:
       trigger?.kind === "pull-request"
         ? pullRequestProjectId === null || pullRequestRepository === null
